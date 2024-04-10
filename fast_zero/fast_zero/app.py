@@ -67,19 +67,18 @@ def login_for_access_token(
 def update_user(
     user_id: int,
     user: UserSchema,
-    session: Session = Depends(get_session),
-    current_user: User = Depends(get_current_user),
-):
-    if current_user.id != user_id:
-        raise HTTPException(status_code=400, detail='Not enough permissions')
+    session: Session = Depends(get_session),):
+    
+    db_user = session.scalar(select(User).where(User.id == user_id))
+    if db_user is None:
+        raise HTTPException(status_code=404, detail='User not found')
 
-    current_user.username = user.username
-    current_user.password = get_password_hash(user.password)
-    current_user.email = user.email
+    db_user.username = user.username
+    db_user.password = get_password_hash(user.password)
+    db_user.email = user.email
     session.commit()
-    session.refresh(current_user)
-
-    return current_user
+    session.refresh(db_user)
+    return db_user
 
 
 @app.get('/users/', response_model=UserList)
